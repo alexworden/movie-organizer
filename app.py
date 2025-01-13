@@ -291,9 +291,15 @@ def movies():
 def configure():
     config = load_config()
     config['movie_folders'] = [folder.strip() for folder in request.form.get('movie_folders', '').split('\n') if folder.strip()]
-    # Split genres by comma and strip whitespace
+    # Split genres by comma and strip whitespace, then split any that contain newlines
     genres_text = request.form.get('genres', '').strip()
-    config['genres'] = [genre.strip() for genre in genres_text.split(',') if genre.strip()]
+    raw_genres = [genre.strip() for genre in genres_text.split(',') if genre.strip()]
+    # Handle any genres that might contain newlines
+    genres = []
+    for genre in raw_genres:
+        genres.extend([g.strip() for g in genre.split('\n') if g.strip()])
+    # Remove duplicates and sort alphabetically
+    config['genres'] = sorted(set(genres))
     save_config(config)
     return redirect(url_for('index'))
 
@@ -302,11 +308,16 @@ def suggest_genre():
     """Handle genre suggestion request"""
     try:
         data = request.get_json()
+        logger.info(f"Received genre suggestion request: {data}")  # Debug log
+        
         movie_path = data.get('title')
         if not movie_path:
+            logger.error("No movie path provided in request")  # Debug log
             return jsonify({'error': 'No movie path provided'}), 400
             
+        logger.info(f"Processing movie path: {movie_path}")  # Debug log
         suggestion = suggest_genre_for_movie(movie_path)
+        logger.info(f"Got genre suggestion: {suggestion}")  # Debug log
         
         # Convert GenreSuggestion object to response format
         response = {

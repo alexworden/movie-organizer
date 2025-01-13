@@ -18,6 +18,28 @@
             display: none;
             margin-left: 0.5rem;
         }
+        .sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important;
+        }
+        
+        .sort-indicator::after {
+            content: '⇕';
+            position: absolute;
+            right: 5px;
+            color: #999;
+        }
+        
+        .sort-asc .sort-indicator::after {
+            content: '↓';
+            color: #000;
+        }
+        
+        .sort-desc .sort-indicator::after {
+            content: '↑';
+            color: #000;
+        }
     </style>
 </head>
 <body>
@@ -41,20 +63,36 @@
                     <p class="mb-0">{{ error_message | replace('\n', '<br>') | safe }}</p>
                 </div>
                 {% endif %}
-                <form action="/movies" method="get">
-                    <select class="form-select mb-3" id="folderSelect" onchange="this.form.submit()" name="selected_folder">
+                <form id="folderForm" action="/movies" method="get" class="mb-3">
+                    <select class="form-select mb-3" id="folderSelect" name="selected_folder">
                     {% for folder in movie_folders %}
                     <option value="{{ folder }}" {% if folder == selected_folder %}selected{% endif %}>{{ folder }}</option>
                     {% endfor %}
                 </select>
+            </form>
+                
+                <div class="mb-3">
+                    <button type="button" class="btn btn-primary" id="getAllSuggestionsButton">
+                        Get All Uncategorized Suggestions
+                    </button>
+                    <button type="button" class="btn btn-success" id="applyAllActionsButton">
+                        Apply All Actions
+                    </button>
+                </div>
             </div>
         </div>
 
-        <table class="table">
+        <table class="table" id="moviesTable">
             <thead>
                 <tr>
-                    <th>Movie Title</th>
-                    <th>Current Genre</th>
+                    <th class="sortable" onclick="sortTable(0)">
+                        Movie Title
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" onclick="sortTable(1)">
+                        Current Genre
+                        <span class="sort-indicator"></span>
+                    </th>
                     <th>Suggested Genre</th>
                     <th>Actions</th>
                 </tr>
@@ -66,20 +104,33 @@
                     <td id="current-genre-{{ loop.index }}">{{ movie.current_genre }}</td>
                     <td id="suggestion-{{ loop.index }}">
                         {% if movie.suggested_genre %}
-                            {% if movie.suggested_genre in config.genres %}
-                                {{ movie.suggested_genre }}
-                            {% else %}
-                                <span class="text-info">New Genre Suggestion: {{ movie.suggested_genre }}</span>
-                            {% endif %}
+                            {{ movie.suggested_genre }}
                         {% else %}
                             <div class="suggestion-container-{{ loop.index0 }}">
-                                <button type="button" class="btn btn-primary btn-sm suggestion-button" onclick="getGenreSuggestion('{{ movie.title }}', {{ loop.index0 }})">
+                                <script>
+                                    console.log('Movie data for index {{ loop.index0 }}:', {
+                                        title: "{{ movie.title }}",
+                                        path: "{{ movie.path }}",
+                                        baseFolder: "{{ movie.base_folder }}"
+                                    });
+                                </script>
+                                <button type="button" class="btn btn-primary btn-sm suggestion-button" 
+                                    data-title="{{ movie.title }}" 
+                                    data-path="{{ movie.path }}"
+                                    data-base-folder="{{ movie.base_folder }}"
+                                    data-index="{{ loop.index0 }}" 
+                                    id="suggestionButton-{{ loop.index0 }}">
                                     Get Suggestion
                                 </button>
                                 <div class="suggestion-loading">
                                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                     <span class="loading-text">Getting suggestion...</span>
-                                    <button type="button" class="btn btn-link btn-sm retry-button" onclick="getGenreSuggestion('{{ movie.title }}', {{ loop.index0 }})">
+                                    <button type="button" class="btn btn-link btn-sm retry-button" 
+                                        data-title="{{ movie.title }}" 
+                                        data-path="{{ movie.path }}"
+                                        data-base-folder="{{ movie.base_folder }}"
+                                        data-index="{{ loop.index0 }}" 
+                                        id="retryButton-{{ loop.index0 }}">
                                         Try again
                                     </button>
                                 </div>
@@ -88,14 +139,42 @@
                     </td>
                     <td id="actions-{{ loop.index }}">
                         {% if movie.suggested_genre and movie.suggested_genre != movie.current_genre %}
-                            {% if movie.suggested_genre in config.genres %}
-                                <button type="button" class="btn btn-success btn-sm" onclick="moveMovie('{{ movie.path }}', '{{ selected_folder }}', '{{ movie.suggested_genre }}')">
-                                    Move to {{ movie.suggested_genre }}
+                            {% set suggested_genre_lower = movie.suggested_genre.lower() %}
+                            {% set genre_exists = false %}
+                            {% for genre in config.genres %}
+                                {% if suggested_genre_lower == genre.lower() %}
+                                    {% set genre_exists = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if genre_exists %}
+                                <button type="button" class="btn btn-success btn-sm move-button" 
+                                    data-path="{{ movie.path|e }}"
+                                    data-base-folder="{{ selected_folder|e }}"
+                                    data-genre="{{ movie.suggested_genre|e }}"
+                                    id="moveButton-{{ loop.index }}">
+                                    <span class="button-text">Move to {{ movie.suggested_genre }}</span>
+                                    <div class="spinner-border spinner-border-sm d-none" role="status">
+                                        <span class="visually-hidden">Moving...</span>
+                                    </div>
+                                    <span class="retry-text d-none">Try again</span>
                                 </button>
                             {% else %}
-                                <button type="button" class="btn btn-info btn-sm" onclick="addNewGenre('{{ movie.suggested_genre }}')">
-                                    Add "{{ movie.suggested_genre }}" to Genres
-                                </button>
+                                <div class="genre-selection">
+                                    <select class="form-select form-select-sm mb-2" 
+                                        data-movie-path="{{ movie.path|e }}"
+                                        data-base-folder="{{ selected_folder|e }}"
+                                        id="genreSelect-{{ loop.index }}"
+                                        onchange="handleGenreSelection(this)">
+                                        <option value="">Select or add genre...</option>
+                                        <option value="new:{{ movie.suggested_genre }}">Add "{{ movie.suggested_genre }}" (Suggested)</option>
+                                        <option value="new:custom">Add custom genre...</option>
+                                        <optgroup label="Existing Genres">
+                                            {% for genre in config.genres %}
+                                                <option value="existing:{{ genre }}">{{ genre }}</option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    </select>
+                                </div>
                             {% endif %}
                         {% endif %}
                     </td>
@@ -109,32 +188,332 @@
         // Store genres list for JavaScript use
         const configuredGenres = {{ config.genres|tojson|safe }};
         
-        async function getGenreSuggestion(title, index, event) {
-            if (event) {
-                event.preventDefault();
+        // Sort state tracking
+        let currentSortColumn = -1;
+        let currentSortDirection = 'asc';
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById('moviesTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const headers = table.querySelectorAll('th');
+            
+            // Update sort direction
+            if (currentSortColumn === columnIndex) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortDirection = 'asc';
+                // Remove sort indicators from other columns
+                headers.forEach(header => {
+                    header.classList.remove('sort-asc', 'sort-desc');
+                });
             }
             
+            currentSortColumn = columnIndex;
+            
+            // Update sort indicator
+            const header = headers[columnIndex];
+            header.classList.remove('sort-asc', 'sort-desc');
+            header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            
+            // Sort the rows
+            rows.sort((a, b) => {
+                let aValue, bValue;
+                
+                // Get text content based on column
+                if (columnIndex === 0) {
+                    // Movie Title - Get from the first cell
+                    aValue = a.cells[0].textContent.trim();
+                    bValue = b.cells[0].textContent.trim();
+                } else if (columnIndex === 1) {
+                    // Current Genre - Get from the genre span
+                    aValue = a.querySelector('[id^="current-genre-"]').textContent.trim();
+                    bValue = b.querySelector('[id^="current-genre-"]').textContent.trim();
+                }
+                
+                // Compare values
+                if (aValue === bValue) return 0;
+                
+                const comparison = aValue.localeCompare(bValue, undefined, {
+                    numeric: true,
+                    sensitivity: 'base'
+                });
+                
+                return currentSortDirection === 'asc' ? comparison : -comparison;
+            });
+            
+            // Reorder the rows in the DOM
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Save sort state
+            saveTableState();
+        }
+        
+        // Save table sort state
+        function saveTableState() {
+            const state = {
+                sortColumn: currentSortColumn,
+                sortDirection: currentSortDirection
+            };
+            sessionStorage.setItem('tableState', JSON.stringify(state));
+        }
+        
+        // Restore table sort state
+        function restoreTableState() {
+            const savedState = JSON.parse(sessionStorage.getItem('tableState'));
+            if (savedState && savedState.sortColumn >= 0) {
+                currentSortColumn = savedState.sortColumn;
+                currentSortDirection = savedState.sortDirection;
+                sortTable(savedState.sortColumn);
+            }
+        }
+        
+        // Restore sort state on page load
+        window.addEventListener('load', function() {
+            restoreTableState();
+        });
+
+        // Create an AbortController for timeouts
+        const createTimeoutController = (timeoutMs) => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), timeoutMs);
+            return { controller, timeout };
+        };
+        
+        async function moveMovie(path, baseFolder, genre) {
+            console.log('Moving movie:', { path, baseFolder, genre });  // Debug log
+            
+            // Get the row that contains this movie
+            const moviePath = decodeURIComponent(path);
+            const baseFolderPath = decodeURIComponent(baseFolder);
+            
+            // Find the button that was clicked
+            const button = document.querySelector(`button[data-path="${path}"]`);
+            if (!button) {
+                console.error('Could not find button for path:', path);
+                return;
+            }
+            
+            const buttonText = button.querySelector('.button-text');
+            const spinner = button.querySelector('.spinner-border');
+            const retryText = button.querySelector('.retry-text');
+            
+            // Show loading state
+            buttonText.style.display = 'none';
+            spinner.classList.remove('d-none');
+            retryText.classList.add('d-none');
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/move_movie', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        movie_path: moviePath,
+                        base_folder: baseFolderPath,
+                        genre: genre
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Move response:', data);  // Debug log
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Update the UI to reflect the move
+                const row = button.closest('tr');
+                const currentGenreCell = row.querySelector('td:nth-child(2)');
+                currentGenreCell.textContent = genre;
+                
+                // Clear the suggestion and action cells
+                const suggestionCell = row.querySelector('td:nth-child(3)');
+                const actionCell = row.querySelector('td:last-child');
+                suggestionCell.textContent = '';
+                actionCell.textContent = 'Moved successfully';
+                
+            } catch (error) {
+                console.error('Error moving movie:', error);
+                
+                // Show retry state
+                buttonText.style.display = 'none';
+                spinner.classList.add('d-none');
+                retryText.classList.remove('d-none');
+                button.disabled = false;
+                
+                // Show error message
+                const row = button.closest('tr');
+                const actionCell = row.querySelector('td:last-child');
+                actionCell.innerHTML = `
+                    <div class="text-danger mb-2">${error.message}</div>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="moveMovie('${path}', '${baseFolder}', '${genre}')">
+                        Try Again
+                    </button>`;
+            }
+        }
+
+        // Handle folder selection change
+        document.getElementById('folderSelect').addEventListener('change', function(event) {
+            // Store current suggestions and actions
+            const rows = Array.from(document.querySelectorAll('tr')).slice(1); // Skip header row
+            const savedState = rows.map(row => ({
+                path: row.querySelector('input[id^="movie-path-"]')?.value,
+                suggestion: row.querySelector('td:nth-child(3)')?.innerHTML,
+                action: row.querySelector('td:nth-child(4)')?.innerHTML
+            }));
+            
+            // Submit form
+            document.getElementById('folderForm').submit();
+            
+            // Store state in sessionStorage for restoration after page load
+            sessionStorage.setItem('savedMovieState', JSON.stringify(savedState));
+        });
+
+        // Restore saved state on page load
+        window.addEventListener('load', function() {
+            const savedState = JSON.parse(sessionStorage.getItem('savedMovieState') || '[]');
+            if (savedState.length > 0) {
+                const rows = Array.from(document.querySelectorAll('tr')).slice(1); // Skip header row
+                rows.forEach(row => {
+                    const path = row.querySelector('input[id^="movie-path-"]')?.value;
+                    const savedRow = savedState.find(s => s.path === path);
+                    if (savedRow) {
+                        const suggestionCell = row.querySelector('td:nth-child(3)');
+                        const actionCell = row.querySelector('td:nth-child(4)');
+                        if (suggestionCell && savedRow.suggestion) {
+                            suggestionCell.innerHTML = savedRow.suggestion;
+                        }
+                        if (actionCell && savedRow.action) {
+                            actionCell.innerHTML = savedRow.action;
+                        }
+                    }
+                });
+                // Clear saved state
+                sessionStorage.removeItem('savedMovieState');
+            }
+        });
+
+        // Sleep function for rate limiting
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        
+        async function getSuggestionsForAll() {
+            console.log('Starting getSuggestionsForAll');  // Debug log
+            const rows = Array.from(document.querySelectorAll('#moviesTable tbody tr'));
+            console.log(`Found ${rows.length} total rows`);  // Debug log
+            
+            let delay = 0;
+            let uncategorizedCount = 0;
+            
+            for (const row of rows) {
+                // Skip if movie already has a genre
+                const currentGenreCell = row.querySelector('td:nth-child(2)');
+                const currentGenre = currentGenreCell.textContent.trim();
+                console.log('Current genre:', currentGenre, 'Length:', currentGenre.length);  // Debug log
+                
+                if (currentGenre && currentGenre !== 'None' && currentGenre !== 'Uncategorized') {
+                    console.log('Skipping movie with existing genre:', currentGenre);  // Debug log
+                    continue;
+                }
+                
+                uncategorizedCount++;
+                const suggestionCell = row.querySelector('td:nth-child(3)');
+                if (!suggestionCell) {
+                    console.error('Could not find suggestion cell');  // Debug log
+                    continue;
+                }
+                
+                const suggestionButton = suggestionCell.querySelector('.suggestion-button');
+                if (suggestionButton) {
+                    console.log('Found suggestion button, clicking after delay');  // Debug log
+                    // Add delay to avoid rate limiting
+                    await sleep(delay);
+                    suggestionButton.click();
+                    delay = 2000; // 2 second delay between requests
+                } else {
+                    console.log('No suggestion button found in cell');  // Debug log
+                }
+            }
+            
+            console.log(`Processed ${uncategorizedCount} uncategorized movies`);  // Debug log
+        }
+        
+        async function applyAllActions() {
+            console.log('Starting applyAllActions');  // Debug log
+            const moveButtons = document.querySelectorAll('.move-button');
+            
+            for (const button of moveButtons) {
+                try {
+                    console.log('Processing button:', button);  // Debug log
+                    const moviePath = button.dataset.path;
+                    const baseFolder = button.dataset.baseFolder;
+                    const genre = button.dataset.genre;
+                    
+                    if (!moviePath || !baseFolder || !genre) {
+                        console.error('Missing required data:', { moviePath, baseFolder, genre });  // Debug log
+                        continue;
+                    }
+                    
+                    console.log('Moving movie:', { moviePath, baseFolder, genre });  // Debug log
+                    await moveMovie(moviePath, baseFolder, genre);
+                    // Add a small delay between actions
+                    await sleep(500);
+                } catch (error) {
+                    console.error('Error processing button:', error);  // Debug log
+                }
+            }
+        }
+        
+        document.getElementById('getAllSuggestionsButton').addEventListener('click', getSuggestionsForAll);
+        document.getElementById('applyAllActionsButton').addEventListener('click', applyAllActions);
+
+        async function getGenreSuggestion(button) {
+            const title = button.dataset.title;
+            const path = button.dataset.path;
+            const baseFolder = button.dataset.baseFolder;
+            const index = parseInt(button.dataset.index);
+            
+            console.log('Raw button data:', button.dataset);  // Debug log
+            
             const container = document.querySelector(`.suggestion-container-${index}`);
-            const button = container.querySelector('.suggestion-button');
+            const suggestionButton = container.querySelector('.suggestion-button');
             const loading = container.querySelector('.suggestion-loading');
             const loadingText = loading.querySelector('.loading-text');
             const retryButton = loading.querySelector('.retry-button');
             const suggestionCell = document.getElementById(`suggestion-${index + 1}`);
             
             // Show loading state
-            button.style.display = 'none';
+            suggestionButton.style.display = 'none';
             loading.style.display = 'inline-block';
             loadingText.textContent = 'Getting suggestion...';
             retryButton.style.display = 'none';
             
             try {
+                // Construct full path
+                const fullPath = baseFolder + (baseFolder.endsWith('/') ? '' : '/') + path;
+                const requestData = { title: fullPath };
+                console.log('Sending request data:', requestData);  // Debug log
+                
                 const response = await fetch('/suggest_genre', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ title: title })
+                    body: JSON.stringify(requestData)
                 });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error:', response.status, errorText);  // Debug log
+                    throw new Error(`Server error: ${response.status} ${errorText}`);
+                }
                 
                 const data = await response.json();
                 console.log('Genre suggestion response:', data);  // Debug log
@@ -145,113 +524,209 @@
                 if (data.status === 'undetermined') {
                     // Handle undetermined genre
                     suggestionCell.innerHTML = `<span class="text-muted">Unable to determine genre</span>`;
-                    button.classList.add('btn-secondary');
-                    button.disabled = true;
-                    button.style.display = 'inline-block';
+                    suggestionButton.classList.add('btn-secondary');
+                    suggestionButton.disabled = true;
+                    suggestionButton.style.display = 'inline-block';
                     return;
                 }
                 
                 if (data.status === 'timeout') {
                     // Handle timeout
                     suggestionCell.innerHTML = `<span class="text-warning">Request timed out. Please try again.</span>`;
-                    button.style.display = 'inline-block';
+                    suggestionButton.style.display = 'inline-block';
                     return;
                 }
                 
                 if (data.error || !data.genre) {
                     // Handle error
                     suggestionCell.innerHTML = `<span class="text-danger">${data.error || 'Failed to get genre'}</span>`;
-                    button.style.display = 'inline-block';
+                    suggestionButton.style.display = 'inline-block';
                     return;
                 }
                 
                 // Handle success
                 const currentGenre = document.getElementById(`current-genre-${index + 1}`).textContent;
-                if (configuredGenres.includes(data.genre)) {
-                    suggestionCell.innerHTML = data.genre;
-                } else {
-                    suggestionCell.innerHTML = `<span class="text-info">New Genre Suggestion: ${data.genre}</span>`;
-                }
+                suggestionCell.innerHTML = data.genre;
                 
                 // Update the actions cell if genre is different
-                if (currentGenre !== data.genre) {
+                if (currentGenre.toLowerCase() !== data.genre.toLowerCase()) {
                     const actionsCell = document.getElementById(`actions-${index + 1}`);
                     const moviePath = document.getElementById(`movie-path-${index + 1}`).value;
                     const baseFolder = document.getElementById(`base-folder-${index + 1}`).value;
                     
-                    if (configuredGenres.includes(data.genre)) {
-                        actionsCell.innerHTML = `
-                            <button type="button" class="btn btn-success btn-sm" onclick="moveMovie('${moviePath}', '${baseFolder}', '${data.genre}')">
-                                Move to ${data.genre}
+                    // Case-insensitive check if genre is in configured genres
+                    const genreExists = configuredGenres.some(g => g.toLowerCase() === data.genre.toLowerCase());
+                    
+                    if (genreExists) {
+                        const buttonHtml = `
+                            <button type="button" class="btn btn-success btn-sm move-button" 
+                                data-path="${moviePath}" 
+                                data-base-folder="${baseFolder}" 
+                                data-genre="${data.genre}"
+                                id="moveButton-${index + 1}">
+                                <span class="button-text">Move to ${data.genre}</span>
+                                <div class="spinner-border spinner-border-sm d-none" role="status">
+                                    <span class="visually-hidden">Moving...</span>
+                                </div>
+                                <span class="retry-text d-none">Try again</span>
                             </button>`;
+                        actionsCell.innerHTML = buttonHtml;
+                        document.getElementById(`moveButton-${index + 1}`).addEventListener('click', function() {
+                            const { path, baseFolder, genre } = this.dataset;
+                            moveMovie(path, baseFolder, genre);
+                        });
                     } else {
-                        actionsCell.innerHTML = `
-                            <button type="button" class="btn btn-info btn-sm" onclick="addNewGenre('${data.genre}')">
-                                Add "${data.genre}" to Genres
-                            </button>`;
+                        const genreOptions = configuredGenres
+                            .map(genre => `<option value="existing:${genre}">${genre}</option>`)
+                            .join('');
+                            
+                        const selectHtml = `
+                            <div class="genre-selection">
+                                <select class="form-select form-select-sm mb-2" 
+                                    data-movie-path="${moviePath.replace(/"/g, '&quot;')}"
+                                    data-base-folder="${baseFolder.replace(/"/g, '&quot;')}"
+                                    id="genreSelect-${index + 1}"
+                                    onchange="handleGenreSelection(this)">
+                                    <option value="">Select or add genre...</option>
+                                    <option value="new:${data.genre}">Add "${data.genre}" (Suggested)</option>
+                                    <option value="new:custom">Add custom genre...</option>
+                                    <optgroup label="Existing Genres">
+                                        ${genreOptions}
+                                    </optgroup>
+                                </select>
+                            </div>`;
+                        actionsCell.innerHTML = selectHtml;
                     }
                 }
                 
             } catch (error) {
                 console.error('Error:', error);
                 loading.style.display = 'none';
-                button.style.display = 'inline-block';
+                suggestionButton.style.display = 'inline-block';
                 suggestionCell.innerHTML = `<span class="text-danger">Error getting suggestion</span>`;
             }
         }
 
-        async function moveMovie(path, baseFolder, genre) {
+        const suggestionButtons = document.querySelectorAll('.suggestion-button');
+        suggestionButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                getGenreSuggestion(this);
+            });
+        });
+
+        async function handleGenreSelection(selectElement) {
+            console.log('handleGenreSelection called');  // Debug log
+            const value = selectElement.value;
+            if (!value) return;
+
+            // Get data from data attributes
+            const moviePath = selectElement.dataset.moviePath;
+            const baseFolder = selectElement.dataset.baseFolder;
+            
+            console.log('Selection data:', { value, moviePath, baseFolder });  // Debug log
+
+            let genre;
+            if (value.startsWith('new:custom')) {
+                // Show prompt for custom genre
+                const customGenre = prompt('Enter new genre name:');
+                if (!customGenre) {
+                    selectElement.value = ''; // Reset selection
+                    return;
+                }
+                genre = customGenre;
+                // Add the new genre first
+                await addNewGenre(genre);
+            } else if (value.startsWith('new:')) {
+                // Add the suggested new genre
+                genre = value.substring(4); // Remove 'new:' prefix
+                await addNewGenre(genre);
+            } else if (value.startsWith('existing:')) {
+                // Use existing genre
+                genre = value.substring(9); // Remove 'existing:' prefix
+            }
+
+            if (genre) {
+                try {
+                    // Find the row and update the action cell with a move button
+                    const row = selectElement.closest('tr');
+                    const actionCell = row.querySelector('td:last-child');
+                    
+                    // Create a temporary button element to properly escape onclick
+                    const tempDiv = document.createElement('div');
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-success btn-sm move-button';
+                    button.setAttribute('data-path', moviePath);
+                    button.setAttribute('data-base-folder', baseFolder);
+                    button.setAttribute('data-genre', genre);
+                    
+                    const buttonText = document.createElement('span');
+                    buttonText.className = 'button-text';
+                    buttonText.textContent = `Move to ${genre}`;
+                    button.appendChild(buttonText);
+                    
+                    const spinner = document.createElement('div');
+                    spinner.className = 'spinner-border spinner-border-sm d-none';
+                    spinner.setAttribute('role', 'status');
+                    const spinnerText = document.createElement('span');
+                    spinnerText.className = 'visually-hidden';
+                    spinnerText.textContent = 'Moving...';
+                    spinner.appendChild(spinnerText);
+                    button.appendChild(spinner);
+                    
+                    const retryText = document.createElement('span');
+                    retryText.className = 'retry-text d-none';
+                    retryText.textContent = 'Try again';
+                    button.appendChild(retryText);
+                    
+                    // Add click handler
+                    button.addEventListener('click', function() {
+                        const { path, baseFolder, genre } = this.dataset;
+                        moveMovie(path, baseFolder, genre);
+                    });
+                    
+                    // Clear and update the action cell
+                    actionCell.innerHTML = '';
+                    actionCell.appendChild(button);
+                    
+                    console.log('Updated action cell successfully');  // Debug log
+                } catch (error) {
+                    console.error('Error updating action cell:', error);
+                    alert('Error updating the move button. Please try again.');
+                }
+            }
+        }
+
+        const genreSelects = document.querySelectorAll('.genre-selection select');
+        genreSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                handleGenreSelection(this);
+            });
+        });
+
+        async function addNewGenre(newGenre) {
             try {
-                const response = await fetch('/move_movie', {
+                const response = await fetch('/add_genre', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ 
-                        movie_path: path,
-                        base_folder: baseFolder,
-                        genre: genre
-                    })
+                    body: JSON.stringify({ genre: newGenre })
                 });
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to move movie');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(`Error: ${data.error}`);
+                    return;
                 }
                 
-                const data = await response.json();
-                if (data.success) {
-                    // Refresh the page to show updated movie locations
-                    window.location.reload();
-                } else {
-                    alert('Failed to move movie: ' + (data.error || 'Unknown error'));
-                }
+                // Refresh the page to show updated genres
+                window.location.reload();
+                
             } catch (error) {
                 console.error('Error:', error);
-                alert(error.message || 'Failed to move movie');
-            }
-        }
-
-        async function addNewGenre(newGenre) {
-            if (confirm(`Would you like to add "${newGenre}" as a new genre category?`)) {
-                try {
-                    const response = await fetch('/add_genre', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ genre: newGenre }),
-                        credentials: 'include'
-                    });
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        throw new Error('Failed to add new genre');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Failed to add new genre');
-                }
+                alert('Failed to add new genre. Please try again.');
             }
         }
     </script>
@@ -259,7 +734,7 @@
     <!-- Hidden inputs for movie data -->
     {% for movie in movies %}
     <input type="hidden" id="movie-path-{{ loop.index }}" value="{{ movie.path }}">
-    <input type="hidden" id="base-folder-{{ loop.index }}" value="{{ movie.base_folder }}">
+    <input type="hidden" id="base-folder-{{ loop.index }}" value="{{ selected_folder }}">
     {% endfor %}
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

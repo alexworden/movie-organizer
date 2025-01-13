@@ -39,23 +39,30 @@ Given a movie filename, first extract the actual title and year, then determine 
 Format your response EXACTLY like this:
 TITLE: [cleaned movie title]
 YEAR: [year if found, or N/A if not found]
-SELECTED_GENRE: [genre from provided list OR new suggestion OR N/A]
+SELECTED_GENRE: [Use one of the provided genres if suitable, otherwise suggest a new genre]
 CONFIDENCE: [High/Medium/Low]
 
 Example outputs:
 For "The.Matrix.1999.1080p.BluRay.x264":
 TITLE: The Matrix
 YEAR: 1999
-SELECTED_GENRE: Science Fiction
+SELECTED_GENRE: SciFi
 CONFIDENCE: High
 
 For "Some.Unknown.Movie.2024.WEBRip":
 TITLE: Some Unknown Movie
 YEAR: 2024
-SELECTED_GENRE: N/A
+SELECTED_GENRE: Documentary
 CONFIDENCE: Low
 
-Available genres: {genres_list}
+For "The.Godfather.1972.BluRay":
+TITLE: The Godfather
+YEAR: 1972
+SELECTED_GENRE: Drama
+CONFIDENCE: High
+
+IMPORTANT: For SELECTED_GENRE, prefer using these existing genres when they fit well: {genres_list}
+If none of these genres are a good match, you may suggest a new genre. When suggesting a new genre, be specific and consistent.
 """},
             {"role": "user", "content": f"""Movie filename: "{title}"
 
