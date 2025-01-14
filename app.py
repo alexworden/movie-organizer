@@ -117,12 +117,20 @@ def get_movie_files(folder_path):
 
         # Walk through the folder and its subfolders
         for root, _, files in os.walk(folder_path):
+            # Skip #recycle folders
+            if '#recycle' in root.lower():
+                continue
+                
             for file in files:
                 if file.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
                     full_path = os.path.join(root, file)
                     relative_path = get_relative_path(full_path, folder_path)
                     current_genre = os.path.basename(os.path.dirname(relative_path))
                     
+                    # Skip if the immediate parent folder is #recycle
+                    if current_genre.lower() == '#recycle':
+                        continue
+                        
                     # Only consider it a genre if it's in our configured genres
                     if current_genre not in genres:
                         current_genre = "Uncategorized"
