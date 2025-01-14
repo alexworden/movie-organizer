@@ -11,6 +11,113 @@
             white-space: pre;
             min-height: 200px;  /* Ensures enough height for ~10 lines */
         }
+
+        :root {
+            --dark-bg: #1a1b1e;
+            --darker-bg: #141517;
+            --dark-surface: #2a2b2e;
+            --dark-border: #363940;
+            --dark-text: #e4e6eb;
+            --dark-text-secondary: #b0b3b8;
+            --dark-hover: #2d2e32;
+            --accent-color: #4f46e5;
+            --accent-hover: #6366f1;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--darker-bg) !important;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .navbar-brand, .nav-link {
+            color: var(--dark-text) !important;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-color) !important;
+        }
+
+        .folder-list {
+            background-color: var(--dark-surface);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .folder-list .list-group-item {
+            background-color: transparent;
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        .folder-list .list-group-item:hover {
+            background-color: var(--dark-hover);
+        }
+
+        .folder-list .list-group-item.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        /* Form controls */
+        .form-control {
+            background-color: var(--darker-bg);
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        .form-control:focus {
+            background-color: var(--darker-bg);
+            border-color: var(--accent-color);
+            color: var(--dark-text);
+            box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--dark-border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--dark-text-secondary);
+        }
+
+        .container {
+            padding-top: 2rem;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--dark-text);
+        }
     </style>
 </head>
 <body>
