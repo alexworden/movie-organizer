@@ -735,61 +735,12 @@
         }
         
         // Event Handlers
-        async function handleFolderChange(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            console.log('Folder select changed');
-            
+        function handleFolderChange(event) {
             const selectedFolder = event.target.value;
-            console.log('Selected folder:', selectedFolder);
-            
-            try {
-                const response = await fetch(`/movies?selected_folder=${encodeURIComponent(selectedFolder)}&partial=true`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const html = await response.text();
-                
-                // Update the table body with the new content
-                const tableBody = document.querySelector('#moviesTable tbody');
-                tableBody.innerHTML = html;
-                
-                // Update URL without reloading
-                const url = new URL(window.location);
-                url.searchParams.set('selected_folder', selectedFolder);
-                window.history.pushState({}, '', url);
-                
-                // Reattach event listeners
-                console.log('Reattaching event listeners after folder change');
-                attachEventListeners();
-                
-            } catch (error) {
-                console.error('Error updating folder content:', error);
-                alert('Error updating folder content. Please try again.');
-            }
-            
-            return false;
+            window.location.href = `/movies?selected_folder=${encodeURIComponent(selectedFolder)}`;
         }
         
-        // Initialize event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded - attaching listeners');
-            
-            // Attach folder change handler
-            const folderSelect = document.getElementById('folderSelect');
-            if (folderSelect) {
-                folderSelect.addEventListener('change', handleFolderChange);
-            }
-            
-            // Attach all other listeners
-            attachEventListeners();
-        });
-        
-        // Sort state tracking
-        let currentSortColumn = -1;
-        let currentSortDirection = 'asc';
-
-        function sortTable(columnIndex) {
+        async function sortTable(columnIndex) {
             const table = document.getElementById('moviesTable');
             const tbody = table.querySelector('tbody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
