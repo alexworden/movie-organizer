@@ -247,45 +247,16 @@
             color: var(--dark-text);
         }
 
-        /* Maintain existing functionality styles */
-        .table td {
-            position: relative;
-            white-space: nowrap;
-            overflow: visible !important;
-            text-overflow: ellipsis;
-            height: 60px;
+        /* Table styles */
+        .table {
+            width: 100%;
         }
 
-        .table-responsive,
-        .table-container {
-            overflow: visible !important;
-        }
-
-        .table th {
-            position: sticky;
-            top: 0;
-            background-color: #fff;
-            z-index: 1;
-            cursor: pointer;
-        }
-        
-        .table th:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .table td {
-            vertical-align: middle;
-            white-space: normal;
-            min-width: 0;
-            max-width: none;
-            overflow: visible;
-            height: 60px; /* Force all cells to same height */
-            position: relative; /* Required for absolute positioning of dropdown */
-        }
-        
+        /* Sort styles */
         .sortable {
             position: relative;
             padding-right: 18px;
+            cursor: pointer;
         }
         
         .sort-indicator {
@@ -309,240 +280,10 @@
             content: '↓';
             color: #000;
         }
-        
+
+        /* Loading states */
         .suggestion-loading {
             display: none;
-            align-items: center;
-            gap: 0.5rem;
-            height: 100%; /* Fill cell height */
-        }
-        
-        .suggestion-container {
-            display: flex;
-            align-items: center;
-            height: 100%; /* Fill cell height */
-        }
-        
-        .edit-suggestion-button {
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-        
-        .edit-suggestion-button:hover {
-            opacity: 1;
-        }
-        
-        /* Ensure consistent button sizes */
-        .btn-sm {
-            min-width: 100px;
-        }
-        
-        /* Make sure the action buttons don't wrap */
-        .move-button {
-            white-space: nowrap;
-            min-width: 150px;
-        }
-        
-        /* Ensure consistent width for suggestion buttons */
-        .suggestion-button {
-            min-width: 120px;
-        }
-        
-        /* Keep edit form consistent width */
-        .edit-genre-select {
-            min-width: 200px;
-            max-width: 300px;
-        }
-        
-        /* Handle long movie titles */
-        .movie-title {
-            word-break: break-word;
-            max-width: 100%;
-            display: block;
-        }
-        
-        .info-button {
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-        
-        .info-button:hover {
-            opacity: 1;
-        }
-        
-        /* Style the tooltip */
-        .tooltip {
-            font-family: monospace;
-            max-width: none;
-        }
-        
-        .tooltip-inner {
-            max-width: none;
-            background-color: #2c3e50;
-            padding: 8px 12px;
-        }
-        
-        .table > :not(caption) > * > * {
-            padding: 0.75rem;
-            vertical-align: middle;
-        }
-        
-        .table td {
-            position: relative;
-            white-space: nowrap;
-            overflow: visible !important; /* Allow dropdown to overflow */
-            text-overflow: ellipsis;
-            height: 60px;
-        }
-        
-        /* Remove any overflow constraints from parent elements */
-        .table, 
-        .table-responsive,
-        .table-container {
-            overflow: visible !important;
-        }
-        
-        .dropdown {
-            position: static;
-        }
-        
-        .dropdown-menu {
-            position: absolute;
-            inset: auto auto auto 0; /* Reset any automatic positioning */
-            margin-top: 2px !important;
-            z-index: 1050 !important; /* Ensure it's above other content */
-            transform: none !important;
-            background: white;
-            border: 1px solid rgba(0,0,0,.15);
-            border-radius: 0.25rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            padding: 0.5rem 0;
-            min-width: 200px !important;
-            max-height: none !important;
-            overflow: visible !important;
-            clip: none !important;
-        }
-        
-        /* Ensure the dropdown container doesn't clip */
-        .dropdown-menu.show {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            transform: none !important;
-            overflow: visible !important;
-            clip: none !important;
-        }
-        
-        /* Style dropdown items */
-        .dropdown-menu .dropdown-item {
-            padding: 0.5rem 1rem;
-            clear: both;
-            font-weight: 400;
-            color: #212529;
-            text-align: inherit;
-            white-space: nowrap;
-            background-color: transparent;
-            border: 0;
-        }
-        
-        .dropdown-menu .dropdown-item:hover,
-        .dropdown-menu .dropdown-item:focus {
-            color: #1e2125;
-            background-color: #f8f9fa;
-        }
-        
-        /* Remove any max-height constraints */
-        .table-responsive {
-            max-height: none !important;
-        }
-        
-        /* Ensure dropdown menu doesn't affect row height */
-        .dropdown-menu {
-            margin-top: 2px !important;
-            position: absolute;
-            z-index: 1000;
-            background: white;
-            border: 1px solid rgba(0,0,0,.15);
-            border-radius: 0.25rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            padding: 0.5rem 0;
-            min-width: 200px !important;
-            max-height: none !important;
-            overflow: visible !important;
-        }
-        
-        .dropdown-menu .dropdown-item {
-            padding: 0.5rem 1rem;
-            clear: both;
-            font-weight: 400;
-            color: #212529;
-            text-align: inherit;
-            text-decoration: none;
-            white-space: nowrap;
-            background-color: transparent;
-            border: 0;
-        }
-        
-        .dropdown-menu .dropdown-item:hover,
-        .dropdown-menu .dropdown-item:focus {
-            color: #1e2125;
-            background-color: #f8f9fa;
-        }
-        
-        .dropdown-menu .dropdown-header {
-            display: block;
-            padding: 0.5rem 1rem;
-            margin-bottom: 0;
-            font-size: 0.875rem;
-            color: #6c757d;
-            white-space: nowrap;
-        }
-        
-        .dropdown-menu .dropdown-divider {
-            height: 0;
-            margin: 0.5rem 0;
-            overflow: hidden;
-            border-top: 1px solid #e9ecef;
-        }
-        
-        /* Ensure dropdown shows on top of other content */
-        .dropdown-menu.show {
-            display: block !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: none !important;
-        }
-        
-        .dropdown {
-            position: static; /* Allow dropdown to break out of cell */
-        }
-        
-        /* Ensure consistent button heights */
-        .btn-sm {
-            display: inline-flex;
-            align-items: center;
-        }
-        
-        /* Ensure move button stays consistent */
-        .move-button {
-            min-width: 120px;
-            justify-content: center;
-        }
-        
-        /* Keep all cells vertically centered */
-        td {
-            vertical-align: middle !important;
-        }
-        
-        /* Make sure suggestion cell content is aligned */
-        td .d-flex {
-            align-items: center;
-            height: 100%; /* Fill cell height */
-        }
-        
-        /* Keep loading state compact */
-        .spinner-border-sm {
-            margin-right: 0.5rem;
         }
         
         .loading .suggestion-button {
@@ -563,6 +304,58 @@
         
         .error .loading-text {
             display: none;
+        }
+
+        /* Button styles */
+        .move-button, .suggestion-button {
+            white-space: nowrap;
+            min-width: 120px;
+        }
+
+        /* Cell alignment */
+        .table td {
+            vertical-align: middle;
+            position: relative;
+        }
+
+        /* Dropdown styles */
+        .dropdown {
+            position: static;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            inset: auto auto auto 0;
+            margin-top: 2px !important;
+            z-index: 1050;
+            min-width: 200px;
+            background: white;
+            border: 1px solid rgba(0,0,0,.15);
+            border-radius: 0.25rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .dropdown-menu.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            transform: none !important;
+        }
+
+        .dropdown-menu .dropdown-item {
+            padding: 0.5rem 1rem;
+            clear: both;
+            font-weight: 400;
+            color: #212529;
+            text-align: inherit;
+            white-space: nowrap;
+            background-color: transparent;
+            border: 0;
+        }
+
+        .dropdown-menu .dropdown-item:hover {
+            color: #1e2125;
+            background-color: #f8f9fa;
         }
     </style>
 </head>
@@ -608,26 +401,27 @@
                     </div>
                 </div>
 
-                <table class="table table-hover" id="moviesTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 60%" class="sortable" onclick="sortTable(0)" data-sort-type="text">
-                                Movie Title
-                                <span class="sort-indicator"></span>
-                            </th>
-                            <th style="width: 15%" class="sortable" onclick="sortTable(1)" data-sort-type="text">
-                                Current Genre
-                                <span class="sort-indicator"></span>
-                            </th>
-                            <th style="width: 15%">Suggested Genre</th>
-                            <th style="width: 10%" class="text-end">Actions</th>
-                        </tr>
-                    </thead>
+                <div class="table-container">
+                    <table class="table table-hover" id="moviesTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 60%" class="sortable" onclick="sortTable(0)" data-sort-type="text">
+                                    Movie Title
+                                    <span class="sort-indicator"></span>
+                                </th>
+                                <th style="width: 15%" class="sortable" onclick="sortTable(1)" data-sort-type="text">
+                                    Current Genre
+                                    <span class="sort-indicator"></span>
+                                </th>
+                                <th style="width: 15%">Suggested Genre</th>
+                                <th style="width: 10%" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
 {% endif %}
             <tbody>
                 {% for movie in movies %}
                 <tr>
-                    <td class="text-break movie-title">
+                    <td class="movie-title">
                         <div class="d-flex align-items-center">
                             <span class="me-2">{{ movie.title }}</span>
                             <button type="button" 
@@ -640,11 +434,11 @@
                             </button>
                         </div>
                     </td>
-                    <td id="current-genre-{{ loop.index }}">{{ movie.current_genre }}</td>
-                    <td id="suggestion-{{ loop.index }}">
+                    <td class="current-genre" id="current-genre-{{ loop.index }}">{{ movie.current_genre }}</td>
+                    <td class="suggestion-cell" id="suggestion-{{ loop.index }}">
                         {% if movie.suggested_genre %}
-                            <div class="d-flex align-items-center">
-                                <span class="me-2">{{ movie.suggested_genre }}</span>
+                            <div class="d-flex align-items-center" style="width: 100%; overflow: hidden;">
+                                <span class="me-2 text-truncate">{{ movie.suggested_genre }}</span>
                                 <div class="dropdown">
                                     <button type="button" class="btn btn-link btn-sm p-0 edit-suggestion-button" 
                                         onclick="event.stopPropagation();"
@@ -697,7 +491,7 @@
                             </div>
                         {% endif %}
                     </td>
-                    <td id="actions-{{ loop.index }}" class="text-end">
+                    <td class="actions-cell text-end" id="actions-{{ loop.index }}">
                         {% if movie.suggested_genre and movie.suggested_genre in config.genres %}
                             <button type="button" class="btn btn-success btn-sm move-button" 
                                 data-path="{{ movie.path }}" 
@@ -717,6 +511,7 @@
 {% if not partial %}
         </table>
     </div>
+</div>
 
     <script>
         // Global variables
@@ -763,13 +558,13 @@
                 let aValue, bValue;
                 
                 if (columnIndex === 0) {
-                    // Movie Title - Get from the first cell
-                    aValue = a.cells[0].textContent.trim();
-                    bValue = b.cells[0].textContent.trim();
+                    // Movie Title - Get text from the title span
+                    aValue = a.querySelector('.movie-title .me-2').textContent.trim();
+                    bValue = b.querySelector('.movie-title .me-2').textContent.trim();
                 } else if (columnIndex === 1) {
-                    // Current Genre - Get from the genre span
-                    aValue = a.querySelector('[id^="current-genre-"]').textContent.trim();
-                    bValue = b.querySelector('[id^="current-genre-"]').textContent.trim();
+                    // Current Genre - Get from the genre cell
+                    aValue = a.querySelector('.current-genre').textContent.trim();
+                    bValue = b.querySelector('.current-genre').textContent.trim();
                 }
                 
                 // Compare values
@@ -988,8 +783,8 @@
                 
                 // Update the cell with the suggestion and edit button
                 cell.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <span class="me-2">${data.genre}</span>
+                    <div class="d-flex align-items-center" style="width: 100%; overflow: hidden;">
+                        <span class="me-2 text-truncate">${data.genre}</span>
                         <div class="dropdown">
                             <button type="button" class="btn btn-link btn-sm p-0 edit-suggestion-button" 
                                 onclick="event.stopPropagation();"
@@ -1022,8 +817,6 @@
                                 `).join('')}
                             </ul>
                         </div>
-                        <input type="hidden" id="movie-path-${index}" value="${path}">
-                        <input type="hidden" id="base-folder-${index}" value="${baseFolder}">
                     </div>`;
 
                 // Get the current genre and update action cell if different
