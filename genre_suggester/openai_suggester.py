@@ -33,8 +33,11 @@ class OpenAIGenreSuggester(GenreSuggesterInterface):
         # Create the prompt for both title extraction and genre suggestion
         genres_list = ', '.join(valid_genres)
         messages = [
-            {"role": "system", "content": """You are a movie expert who can clean up movie filenames and determine genres.
+            {"role": "system", "content": f"""You are a movie expert who can clean up movie filenames and determine genres.
 Given a movie filename, first extract the actual title and year, then determine its genre.
+
+Your primary goal is to categorize movies using these existing genres whenever possible: {genres_list}
+Only suggest a new genre if absolutely none of the existing genres could work.
 
 Format your response EXACTLY like this:
 TITLE: [cleaned movie title]
@@ -42,28 +45,41 @@ YEAR: [year if found, or N/A if not found]
 SELECTED_GENRE: [Use one of the provided genres if suitable, otherwise suggest a new genre]
 CONFIDENCE: [High/Medium/Low]
 
-Example outputs:
-For "The.Matrix.1999.1080p.BluRay.x264":
-TITLE: The Matrix
-YEAR: 1999
-SELECTED_GENRE: SciFi
-CONFIDENCE: High
+Here are examples of using broader existing genres:
 
-For "Some.Unknown.Movie.2024.WEBRip":
+Input: "Spider.Man.2002.1080p.BluRay.x264"
+TITLE: Spider-Man
+YEAR: 2002
+SELECTED_GENRE: Action
+CONFIDENCE: High
+Explanation: While this could be "Superhero", we use the broader "Action" genre that exists
+
+Input: "Lord.of.the.Rings.2001.BluRay"
+TITLE: The Lord of the Rings
+YEAR: 2001
+SELECTED_GENRE: Fantasy
+CONFIDENCE: High
+Explanation: While this could be "Epic Fantasy", we use the broader "Fantasy" genre that exists
+
+Input: "The.Conjuring.2013.WEBRip"
+TITLE: The Conjuring
+YEAR: 2013
+SELECTED_GENRE: Horror
+CONFIDENCE: High
+Explanation: While this could be "Supernatural Horror", we use the broader "Horror" genre that exists
+
+Input: "Some.Unknown.Movie.2024.WEBRip"
 TITLE: Some Unknown Movie
 YEAR: 2024
-SELECTED_GENRE: Documentary
-CONFIDENCE: Low
-
-For "The.Godfather.1972.BluRay":
-TITLE: The Godfather
-YEAR: 1972
 SELECTED_GENRE: Drama
-CONFIDENCE: High
+CONFIDENCE: Low
+Explanation: When uncertain, use a broader existing genre rather than creating a new one
 
-IMPORTANT: For SELECTED_GENRE, prefer using these existing genres when they fit well: {genres_list}
-If none of these genres are a good match, you may suggest a new genre. When suggesting a new genre, be specific and consistent.
-"""},
+IMPORTANT RULES:
+1. ALWAYS prefer an existing genre, even if it's broader than the specific sub-genre you have in mind
+2. A movie fitting multiple genres is normal - pick the most relevant existing genre
+3. It's better to use a broader existing genre than to create a new specific one
+4. Only suggest a new genre if the movie absolutely cannot fit into any existing genre"""},
             {"role": "user", "content": f"""Movie filename: "{title}"
 
 Please clean up this movie title and determine its genre from the available genres."""}
