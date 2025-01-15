@@ -395,7 +395,7 @@
                         <button type="button" id="stopSuggestionsButton" class="btn btn-danger d-none" onclick="stopGettingSuggestions()">
                             Stop Getting Suggestions
                         </button>
-                        <button type="button" class="btn btn-primary ms-2" onclick="applyAllActions()">
+                        <button type="button" class="btn btn-primary ms-2" id="applyAllButton" onclick="applyAllActions()">
                             Apply All Actions
                         </button>
                     </div>
@@ -436,8 +436,8 @@
                     </td>
                     <td class="current-genre" id="current-genre-{{ loop.index }}">{{ movie.current_genre }}</td>
                     <td class="suggestion-cell" id="suggestion-{{ loop.index }}">
-                        {% if movie.suggested_genre %}
-                            <div class="d-flex align-items-center" style="width: 100%; overflow: hidden;">
+                        <div class="d-flex align-items-center suggestion-container" style="width: 100%; overflow: hidden;">
+                            {% if movie.suggested_genre %}
                                 <span class="me-2 text-truncate">{{ movie.suggested_genre }}</span>
                                 <div class="dropdown">
                                     <button type="button" class="btn btn-link btn-sm p-0 edit-suggestion-button" 
@@ -450,13 +450,13 @@
                                     <ul class="dropdown-menu p-2" style="min-width: 200px;" data-bs-popper="static">
                                         {% if movie.suggested_genre not in config.get('genres', []) %}
                                             <li>
-                                                <button class="dropdown-item" onclick="handleGenreSelection('{{ movie.path }}', '{{ selected_folder }}', '{{ movie.suggested_genre }}', 'add')">
+                                                <button class="dropdown-item" onclick="handleGenreSelection(event, '{{ movie.path }}', '{{ selected_folder }}', '{{ movie.suggested_genre }}', 'add')">
                                                     Add "{{ movie.suggested_genre }}" as new genre
                                                 </button>
                                             </li>
                                         {% endif %}
                                         <li>
-                                            <button class="dropdown-item" onclick="handleGenreSelection('{{ movie.path }}', '{{ selected_folder }}', '', 'custom')">
+                                            <button class="dropdown-item" onclick="handleGenreSelection(event, '{{ movie.path }}', '{{ selected_folder }}', '', 'custom')">
                                                 Add custom genre...
                                             </button>
                                         </li>
@@ -464,32 +464,26 @@
                                         <li><h6 class="dropdown-header">Existing Genres</h6></li>
                                         {% for genre in config.get('genres', []) %}
                                             <li>
-                                                <button class="dropdown-item" onclick="handleGenreSelection('{{ movie.path }}', '{{ selected_folder }}', '{{ genre }}', 'select')">
+                                                <button class="dropdown-item" onclick="handleGenreSelection(event, '{{ movie.path }}', '{{ selected_folder }}', '{{ genre }}', 'select')">
                                                     {{ genre }}
                                                 </button>
                                             </li>
                                         {% endfor %}
                                     </ul>
                                 </div>
-                                <input type="hidden" id="movie-path-{{ loop.index }}" value="{{ movie.path }}">
-                                <input type="hidden" id="base-folder-{{ loop.index }}" value="{{ selected_folder }}">
-                            </div>
-                        {% else %}
-                            <div class="suggestion-container">
-                                <button type="button" class="btn btn-primary btn-sm suggestion-button" 
-                                    data-title="{{ movie.title }}" 
+                            {% else %}
+                                <button type="button" 
+                                    class="btn btn-outline-primary btn-sm suggestion-button"
                                     data-path="{{ movie.path }}"
-                                    data-base-folder="{{ selected_folder }}"
-                                    data-index="{{ loop.index0 }}" 
-                                    id="suggestionButton-{{ loop.index0 }}">
-                                    Get Suggestion
+                                    data-base-folder="{{ selected_folder }}">
+                                    <span class="button-text">Get Suggestion</span>
+                                    <div class="spinner-border spinner-border-sm d-none" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="retry-text d-none">Try again</span>
                                 </button>
-                                <div class="suggestion-loading">
-                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    <span class="loading-text">Getting suggestion...</span>
-                                </div>
-                            </div>
-                        {% endif %}
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="actions-cell text-end" id="actions-{{ loop.index }}">
                         {% if movie.suggested_genre and movie.suggested_genre in config.genres %}
@@ -608,32 +602,25 @@
         async function moveMovie(moviePath, baseFolder, genre) {
             console.log('Moving movie:', { path: moviePath, baseFolder, genre });  // Debug log
             
-            // Get the row that contains this movie
-            const moviePathInput = document.querySelector(`input[value="${moviePath}"]`);
-            if (!moviePathInput) {
-                console.error('Could not find movie row');
+            // Get the row that contains the move button for this movie
+            const moveButton = document.querySelector(`.move-button[data-path="${moviePath}"]`);
+            if (!moveButton) {
+                console.error('Could not find move button for path:', moviePath);
                 return;
             }
             
-            const row = moviePathInput.closest('tr');
+            const row = moveButton.closest('tr');
             if (!row) {
                 console.error('Could not find movie row');
                 return;
             }
             
-            // Find the button that was clicked
-            const button = row.querySelector('.move-button');
-            if (!button) {
-                console.error('Could not find button for path:', moviePath);
-                return;
-            }
-            
-            const buttonText = button.querySelector('.button-text');
-            const spinner = button.querySelector('.spinner-border');
-            const retryText = button.querySelector('.retry-text');
+            const buttonText = moveButton.querySelector('.button-text');
+            const spinner = moveButton.querySelector('.spinner-border');
+            const retryText = moveButton.querySelector('.retry-text');
             
             // Show loading state
-            button.disabled = true;
+            moveButton.disabled = true;
             buttonText.classList.add('d-none');
             spinner.classList.remove('d-none');
             retryText.classList.add('d-none');
@@ -664,9 +651,9 @@
                 }
                 
                 // Show success state
-                button.className = 'btn btn-outline-success btn-sm disabled';
-                button.style.minWidth = button.offsetWidth + 'px'; // Preserve button width
-                button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Moved';
+                moveButton.className = 'btn btn-outline-success btn-sm disabled';
+                moveButton.style.minWidth = moveButton.offsetWidth + 'px'; // Preserve button width
+                moveButton.innerHTML = '<i class="bi bi-check-lg me-1"></i>Moved';
                 
                 // Update the current genre cell
                 const currentGenreCell = row.querySelector('td:nth-child(2)');
@@ -678,9 +665,9 @@
                 console.error('Error moving movie:', error);
                 
                 // Show retry state
-                button.disabled = false;
-                button.classList.remove('btn-success');
-                button.classList.add('btn-danger');
+                moveButton.disabled = false;
+                moveButton.classList.remove('btn-success');
+                moveButton.classList.add('btn-danger');
                 buttonText.classList.add('d-none');
                 spinner.classList.add('d-none');
                 retryText.classList.remove('d-none');
@@ -690,7 +677,7 @@
         async function getUncategorizedSuggestions() {
             // Find all suggestion buttons for uncategorized movies
             const uncategorizedButtons = Array.from(document.querySelectorAll('#moviesTable tbody tr')).filter(row => {
-                const currentGenreCell = row.querySelector('td:nth-child(2)');
+                const currentGenreCell = row.querySelector('.current-genre');
                 return currentGenreCell && currentGenreCell.textContent.trim() === 'Uncategorized';
             }).map(row => row.querySelector('.suggestion-button')).filter(button => button && !button.disabled);
 
@@ -743,13 +730,32 @@
         }
 
         async function getGenreSuggestion(button) {
-            const container = button.closest('.suggestion-container');
-            if (!container) {
-                console.error('Could not find suggestion container');
+            const cell = button.closest('.suggestion-cell');
+            if (!cell) {
+                console.error('Could not find suggestion cell');
                 return;
             }
-            
-            // Add loading class to container
+
+            const container = cell.querySelector('.suggestion-container');
+            if (!container) {
+                console.error('Could not find container');
+                return;
+            }
+
+            const row = cell.closest('tr');
+            if (!row) {
+                console.error('Could not find movie row');
+                return;
+            }
+
+            const path = button.dataset.path;
+            const baseFolder = button.dataset.baseFolder;
+            if (!path || !baseFolder) {
+                console.error('Missing path or base folder data');
+                return;
+            }
+
+            // Show loading state
             container.classList.add('loading');
             
             try {
@@ -759,107 +765,91 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        title: button.dataset.title,
-                        path: button.dataset.path,
-                        base_folder: button.dataset.baseFolder
+                        title: path,
+                        base_folder: baseFolder
                     })
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error('Failed to get suggestion');
+                    throw new Error(`Server error: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
-                // Get the cell that contains this button
-                const cell = container.closest('td');
-                if (!cell) {
-                    throw new Error('Could not find cell');
+                if (data.error) {
+                    throw new Error(data.error);
                 }
-                
-                const index = button.dataset.index;
-                const path = button.dataset.path;
-                const baseFolder = button.dataset.baseFolder;
-                
-                // Update the cell with the suggestion and edit button
-                cell.innerHTML = `
-                    <div class="d-flex align-items-center" style="width: 100%; overflow: hidden;">
-                        <span class="me-2 text-truncate">${data.genre}</span>
-                        <div class="dropdown">
-                            <button type="button" class="btn btn-link btn-sm p-0 edit-suggestion-button" 
-                                onclick="event.stopPropagation();"
-                                data-bs-toggle="dropdown" 
-                                data-index="${index}"
-                                aria-expanded="false">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            <ul class="dropdown-menu p-2" style="min-width: 200px;" data-bs-popper="static">
-                                ${!configuredGenres.some(g => g.toLowerCase() === data.genre.toLowerCase()) ? `
-                                    <li>
-                                        <button class="dropdown-item" onclick="handleGenreSelection('${path}', '${baseFolder}', '${data.genre}', 'add')">
-                                            Add "${data.genre}" as new genre
-                                        </button>
-                                    </li>
-                                ` : ''}
+
+                // Remove loading state
+                container.classList.remove('loading');
+
+                // Update genre text and create dropdown
+                container.innerHTML = `
+                    <span class="me-2 text-truncate">${data.genre}</span>
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-link btn-sm p-0 edit-suggestion-button" data-bs-toggle="dropdown">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <ul class="dropdown-menu p-2" style="min-width: 200px;" data-bs-popper="static">
+                            <li>
+                                <button class="dropdown-item" onclick="handleGenreSelection(event, '${path}', '${baseFolder}', '${data.genre}', 'add')">
+                                    Add "${data.genre}" as new genre
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" onclick="handleGenreSelection(event, '${path}', '${baseFolder}', '', 'custom')">
+                                    Add custom genre...
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Existing Genres</h6></li>
+                            ${configuredGenres.map(genre => `
                                 <li>
-                                    <button class="dropdown-item" onclick="handleGenreSelection('${path}', '${baseFolder}', '', 'custom')">
-                                        Add custom genre...
+                                    <button class="dropdown-item" onclick="handleGenreSelection(event, '${path}', '${baseFolder}', '${genre}', 'select')">
+                                        ${genre}
                                     </button>
                                 </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Existing Genres</h6></li>
-                                ${configuredGenres.map(genre => `
-                                    <li>
-                                        <button class="dropdown-item" onclick="handleGenreSelection('${path}', '${baseFolder}', '${genre}', 'select')">
-                                            ${genre}
-                                        </button>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        </div>
+                            `).join('')}
+                        </ul>
                     </div>`;
 
                 // Get the current genre and update action cell if different
-                const row = cell.closest('tr');
-                if (!row) {
-                    throw new Error('Could not find row');
-                }
-                
-                const currentGenreCell = row.querySelector('td:nth-child(2)');
+                const currentGenreCell = row.querySelector('.current-genre');
                 if (!currentGenreCell) {
                     throw new Error('Could not find current genre cell');
                 }
                 
                 const currentGenre = currentGenreCell.textContent.trim();
                 if (currentGenre.toLowerCase() !== data.genre.toLowerCase()) {
-                    const actionCell = row.querySelector('td:last-child');
+                    const actionCell = row.querySelector('.actions-cell');
                     if (!actionCell) {
                         throw new Error('Could not find action cell');
                     }
+
+                    // Clear the action cell and append the new move button
+                    actionCell.innerHTML = '';
+                    const moveButton = createMoveButton(path, baseFolder, data.genre);
+                    actionCell.appendChild(moveButton);
                     
-                    actionCell.innerHTML = `
-                        <button type="button" class="btn btn-success btn-sm move-button" 
-                            data-path="${path}" 
-                            data-base-folder="${baseFolder}" 
-                            data-genre="${data.genre}">
-                            <span class="button-text">Move to ${data.genre}</span>
-                            <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Moving...</span>
-                            </div>
-                            <span class="retry-text d-none">Try again</span>
-                        </button>`;
-                    
-                    // Attach move button listener
-                    const moveButton = actionCell.querySelector('.move-button');
-                    moveButton.addEventListener('click', function() {
-                        moveMovie(this.dataset.path, this.dataset.baseFolder, this.dataset.genre);
-                    });
+                    // Attach event listener to the new move button
+                    if (moveButton) {
+                        attachMoveButtonListener(moveButton);
+                    }
                 }
                 
             } catch (error) {
                 console.error('Error getting suggestion:', error);
                 container.classList.remove('loading');
                 container.classList.add('error');
+                
+                // Reset the button to allow retrying
+                const buttonText = container.querySelector('.button-text');
+                if (buttonText) {
+                    buttonText.classList.add('d-none');
+                }
+                const retryText = container.querySelector('.retry-text');
+                if (retryText) {
+                    retryText.classList.remove('d-none');
+                }
             }
         }
 
@@ -901,10 +891,10 @@
             return newButton;
         }
 
-        async function handleGenreSelection(moviePath, baseFolder, genre, action) {
+        async function handleGenreSelection(event, moviePath, baseFolder, genre, action) {
             try {
                 let selectedGenre = genre;
-                
+
                 if (action === 'custom') {
                     const newGenre = prompt('Enter new genre name:');
                     if (!newGenre) return;
@@ -927,19 +917,14 @@
                     }
                 }
 
-                // Find the row using the path
-                const moviePathInput = document.querySelector(`input[value="${moviePath}"]`);
-                if (!moviePathInput) {
-                    throw new Error('Could not find movie row');
-                }
-                
-                const row = moviePathInput.closest('tr');
+                // Find the row from the clicked dropdown item
+                const row = event.target.closest('tr');
                 if (!row) {
                     throw new Error('Could not find movie row');
                 }
-                
+
                 // Update suggested genre text
-                const suggestionCell = row.querySelector('td:nth-child(3)');
+                const suggestionCell = row.querySelector('.suggestion-cell');
                 if (!suggestionCell) {
                     throw new Error('Could not find suggestion cell');
                 }
@@ -950,45 +935,28 @@
                 }
 
                 // Update actions cell if genre is different from current
-                const currentGenreCell = row.querySelector('td:nth-child(2)');
+                const currentGenreCell = row.querySelector('.current-genre');
                 if (!currentGenreCell) {
                     throw new Error('Could not find current genre cell');
                 }
                 
                 const currentGenre = currentGenreCell.textContent.trim();
+
                 if (currentGenre.toLowerCase() !== selectedGenre.toLowerCase()) {
-                    const actionCell = row.querySelector('td:last-child');
+                    const actionCell = row.querySelector('.actions-cell');
                     if (!actionCell) {
                         throw new Error('Could not find action cell');
                     }
-                    
-                    const moveButton = document.createElement('button');
-                    moveButton.type = 'button';
-                    moveButton.className = 'btn btn-success btn-sm move-button';
-                    moveButton.innerHTML = `
-                        <span class="button-text">Move to ${selectedGenre}</span>
-                        <div class="spinner-border spinner-border-sm d-none" role="status">
-                            <span class="visually-hidden">Moving...</span>
-                        </div>
-                        <span class="retry-text d-none">Try again</span>
-                    `;
-                    
-                    moveButton.dataset.path = moviePath;
-                    moveButton.dataset.baseFolder = baseFolder;
-                    moveButton.dataset.genre = selectedGenre;
-                    
+
+                    // Clear the action cell and append the new move button
                     actionCell.innerHTML = '';
+                    const moveButton = createMoveButton(moviePath, baseFolder, selectedGenre);
                     actionCell.appendChild(moveButton);
                     
-                    moveButton.addEventListener('click', function() {
-                        moveMovie(this.dataset.path, this.dataset.baseFolder, this.dataset.genre);
-                    });
-                }
-
-                // Hide the dropdown
-                const dropdown = document.querySelector('.dropdown-menu.show');
-                if (dropdown) {
-                    dropdown.classList.remove('show');
+                    // Attach event listener to the new move button
+                    if (moveButton) {
+                        attachMoveButtonListener(moveButton);
+                    }
                 }
 
             } catch (error) {
@@ -996,7 +964,7 @@
                 alert('Failed to update genre. Please try again.');
             }
         }
-
+        
         function showGenreEditForm(button) {
             // Show/hide dropdown is now handled by Bootstrap
             // This function is kept for any additional functionality we might need
@@ -1151,13 +1119,50 @@
                 subtree: true
             });
         });
+        
+        async function applyAllActions() {
+            // Find all visible move buttons
+            const moveButtons = document.querySelectorAll('.move-button:not(.disabled)');
+            
+            if (moveButtons.length === 0) {
+                console.log('No move actions to apply');
+                return;
+            }
+
+            // Disable the Apply All button
+            const applyAllButton = document.getElementById('applyAllButton');
+            const originalText = applyAllButton.innerHTML;
+            applyAllButton.disabled = true;
+            applyAllButton.innerHTML = `
+                <span class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Moving...</span>
+                </span>
+                Moving...
+            `;
+
+            try {
+                // Process each move button sequentially
+                for (const button of moveButtons) {
+                    const { path, baseFolder, genre } = button.dataset;
+                    await moveMovie(path, baseFolder, genre);
+                    // Add a small delay between moves to avoid overwhelming the server
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                // Show success state on the Apply All button
+                applyAllButton.className = 'btn btn-outline-success';
+                applyAllButton.innerHTML = '<i class="bi bi-check-lg"></i> All Movies Moved';
+
+            } catch (error) {
+                console.error('Error applying all actions:', error);
+                
+                // Show error state
+                applyAllButton.disabled = false;
+                applyAllButton.className = 'btn btn-danger';
+                applyAllButton.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error - Try Again';
+            }
+        }
     </script>
-    
-    <!-- Hidden inputs for movie data -->
-    {% for movie in movies %}
-    <input type="hidden" id="movie-path-{{ loop.index }}" value="{{ movie.path }}">
-    <input type="hidden" id="base-folder-{{ loop.index }}" value="{{ selected_folder }}">
-    {% endfor %}
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% endif %}
